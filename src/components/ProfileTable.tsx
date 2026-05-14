@@ -1,5 +1,6 @@
 import { motion } from 'motion/react';
-import { Download, ExternalLink, Globe, Layout, Briefcase, User, Calendar } from 'lucide-react';
+import { Download, ExternalLink, Globe, Layout, Briefcase, User, Calendar, ShieldCheck, AlertTriangle, HelpCircle } from 'lucide-react';
+import type { ProfileDataSource } from '../services/geminiService';
 
 interface Profile {
   id: string;
@@ -12,6 +13,7 @@ interface Profile {
   industry: string;
   personalWebsite?: string;
   companyWebsite?: string;
+  dataSource?: ProfileDataSource;
   createdAt: any;
 }
 
@@ -112,9 +114,26 @@ export default function ProfileTable({ profiles, onSelect, onExport }: Props) {
                   </div>
                 </td>
                 <td className="p-4 border-r-2 border-black">
-                  <div className="flex items-center gap-2 text-[10px] font-black uppercase">
-                    <Calendar className="w-3 h-3 text-black/40" />
-                    {new Date(profile.createdAt).toLocaleDateString()}
+                  <div className="space-y-2">
+                    {profile.dataSource === 'apify_scrape' && (
+                      <div className="flex items-center gap-1.5 text-[8px] font-black uppercase bg-accent text-black px-2 py-1 border border-black w-fit">
+                        <ShieldCheck className="w-3 h-3 shrink-0" /> Verified
+                      </div>
+                    )}
+                    {profile.dataSource === 'gemini_recon' && (
+                      <div className="flex items-center gap-1.5 text-[8px] font-black uppercase bg-amber-200 text-amber-950 px-2 py-1 border border-black w-fit">
+                        <AlertTriangle className="w-3 h-3 shrink-0" /> Unverified
+                      </div>
+                    )}
+                    {!profile.dataSource && (
+                      <div className="flex items-center gap-1.5 text-[8px] font-black uppercase opacity-40 px-2 py-1 border border-dashed border-black w-fit">
+                        <HelpCircle className="w-3 h-3 shrink-0" /> Unknown
+                      </div>
+                    )}
+                    <div className="flex items-center gap-2 text-[10px] font-black uppercase">
+                      <Calendar className="w-3 h-3 text-black/40" />
+                      {new Date(profile.createdAt).toLocaleDateString()}
+                    </div>
                   </div>
                 </td>
                 <td className="p-4">

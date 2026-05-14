@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { Check, Copy, Sparkles, Globe, Briefcase, User, Info, Layout } from 'lucide-react';
+import { Check, Copy, Sparkles, Globe, Briefcase, User, Info, Layout, ShieldCheck, AlertTriangle, HelpCircle } from 'lucide-react';
 import type { OutreachContent } from '../services/geminiService';
+import { preferCommaOverLongDash } from '../lib/messageFormat';
 
 interface Props {
   content: OutreachContent;
@@ -9,15 +10,70 @@ interface Props {
 
 export default function MessageDisplay({ content }: Props) {
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [variationIndex, setVariationIndex] = useState(0);
+
+  const variations = useMemo(() => {
+    const v = content.messageVariations;
+    if (v && v.length > 0) return v.slice(0, 6);
+    return [
+      {
+        label: 'Relational',
+        connectionRequest: content.connectionRequest,
+        firstDM: content.firstDM,
+        icebreakerAngle: content.icebreakerAngle,
+      },
+    ];
+  }, [content]);
+
+  const active = variations[Math.min(variationIndex, variations.length - 1)] ?? variations[0]!;
+
+  useEffect(() => {
+    setVariationIndex(0);
+  }, [content.url]);
 
   const copyToClipboard = async (text: string, id: string) => {
-    await navigator.clipboard.writeText(text);
+    await navigator.clipboard.writeText(preferCommaOverLongDash(text));
     setCopiedId(id);
     setTimeout(() => setCopiedId(null), 2000);
   };
 
+  const provenance = content.dataSource;
+
   return (
     <div className="space-y-12" id="message-display-container">
+      {/* DATA PROVENANCE */}
+      {provenance === 'apify_scrape' ? (
+        <div className="border-4 border-black bg-accent px-4 py-3 flex flex-wrap items-center gap-3 shadow-[4px_4px_0px_0px_#000]">
+          <ShieldCheck className="w-5 h-5 shrink-0" />
+          <div>
+            <div className="text-[10px] font-black uppercase tracking-widest">Verified scrape</div>
+            <p className="text-[10px] font-bold uppercase opacity-70 mt-0.5">
+              Profile fields grounded in live LinkedIn data via Apify (then formatted by Gemini).
+            </p>
+          </div>
+        </div>
+      ) : provenance === 'gemini_recon' ? (
+        <div className="border-4 border-black bg-amber-200 px-4 py-3 flex flex-wrap items-center gap-3 shadow-[4px_4px_0px_0px_#000]">
+          <AlertTriangle className="w-5 h-5 shrink-0 text-amber-900" />
+          <div>
+            <div className="text-[10px] font-black uppercase tracking-widest text-amber-950">Unverified, search-based recon</div>
+            <p className="text-[10px] font-bold uppercase opacity-80 mt-0.5 text-amber-950">
+              Apify scrape unavailable; name, role, and company may come from Google Search and URL context only. Double-check before sending.
+            </p>
+          </div>
+        </div>
+      ) : (
+        <div className="border-4 border-dashed border-black/40 bg-white px-4 py-3 flex flex-wrap items-center gap-3">
+          <HelpCircle className="w-5 h-5 shrink-0 opacity-50" />
+          <div>
+            <div className="text-[10px] font-black uppercase tracking-widest opacity-60">Provenance not recorded</div>
+            <p className="text-[10px] font-bold uppercase opacity-40 mt-0.5">
+              This archive row predates source tagging. Re-run synthesis on the profile URL for a verified badge.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* EXTRACTED INTELLIGENCE GRID */}
       <section className="space-y-6">
         <div className="flex items-center gap-4 text-[10px] font-black uppercase tracking-[0.3em]">
@@ -130,6 +186,29 @@ export default function MessageDisplay({ content }: Props) {
         )}
       </section>
 
+      {/* MESSAGE VARIATIONS */}
+      {variations.length > 1 && (
+        <div className="space-y-3">
+          <div className="text-[10px] font-black uppercase tracking-[0.3em] text-black/50">
+            Outreach variants ({variations.length}), pick one to copy
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {variations.map((v, i) => (
+              <button
+                key={`${v.label}-${i}`}
+                type="button"
+                onClick={() => setVariationIndex(i)}
+                className={`border-4 border-black px-3 py-2 text-[10px] font-black uppercase tracking-tight transition-all shadow-[3px_3px_0px_0px_#000] ${
+                  variationIndex === i ? 'bg-accent text-black' : 'bg-white hover:bg-black/5'
+                }`}
+              >
+                {i + 1}. {v.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* CONNECTION REQUEST */}
       <motion.div
         initial={{ opacity: 0, x: 20 }}
@@ -139,17 +218,17 @@ export default function MessageDisplay({ content }: Props) {
         <div className="flex justify-between items-start mb-6 border-b-2 border-black pb-4">
           <span className="text-[10px] font-black tracking-[0.3em] uppercase">01 / Connection_Req</span>
           <div className="flex items-center gap-4">
-            <span className={`text-[10px] font-mono font-black ${content.connectionRequest.length > 280 ? 'text-red-500' : 'text-black/30'}`}>
-              {content.connectionRequest.length} / 280
+            <span className={`text-[10px] font-mono font-black ${active.connectionRequest.length > 280 ? 'text-red-500' : 'text-black/30'}`}>
+              {active.connectionRequest.length} / 280
             </span>
             {copiedId === 'req' && <Check className="w-4 h-4 text-green-500" />}
           </div>
         </div>
-        <p className="text-4xl font-black leading-[1] tracking-tighter uppercase mb-8 italic">
-          "{content.connectionRequest}"
+        <p className="text-xl sm:text-2xl md:text-3xl font-normal leading-[1.1em] [text-transform:math-auto] mb-6 text-black normal-case not-italic tracking-normal">
+          {preferCommaOverLongDash(active.connectionRequest)}
         </p>
         <button 
-          onClick={() => copyToClipboard(content.connectionRequest, 'req')}
+          onClick={() => copyToClipboard(active.connectionRequest, 'req')}
           className="bg-black text-white px-8 py-3 text-[10px] font-black uppercase tracking-widest hover:bg-accent hover:text-black transition-all active:translate-y-1 active:shadow-none"
         >
           Copy Connection Msg
@@ -170,11 +249,11 @@ export default function MessageDisplay({ content }: Props) {
             {copiedId === 'dm' && <Check className="w-4 h-4 text-green-500" />}
           </div>
         </div>
-        <p className="text-4xl font-black leading-[1] tracking-tighter uppercase mb-8 italic">
-          "{content.firstDM}"
+        <p className="text-xl sm:text-2xl md:text-3xl font-normal leading-[1.1em] [text-transform:math-auto] mb-6 text-black normal-case not-italic tracking-normal">
+          {preferCommaOverLongDash(active.firstDM)}
         </p>
         <button 
-          onClick={() => copyToClipboard(content.firstDM, 'dm')}
+          onClick={() => copyToClipboard(active.firstDM, 'dm')}
           className="bg-black text-white px-8 py-3 text-[10px] font-black uppercase tracking-widest hover:bg-accent hover:text-black transition-all active:translate-y-1 active:shadow-none"
         >
           Copy First DM
@@ -192,8 +271,8 @@ export default function MessageDisplay({ content }: Props) {
           <Sparkles className="w-5 h-5 text-accent" />
           <span className="text-[10px] font-black tracking-[0.3em] uppercase">03 / Strategy_Log</span>
         </div>
-        <p className="text-sm font-mono leading-relaxed text-white/80 uppercase">
-          {content.icebreakerAngle}
+        <p className="text-sm font-normal leading-[1.1em] [text-transform:math-auto] text-white/90 normal-case not-italic">
+          {preferCommaOverLongDash(active.icebreakerAngle)}
         </p>
       </motion.div>
     </div>

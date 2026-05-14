@@ -5,7 +5,11 @@ export function exportToCSV(data: any[], filename: string) {
   const rows = data.map(obj => {
     return Object.values(obj)
       .map(val => {
-        const str = String(val).replace(/"/g, '""');
+        const serialized =
+          val != null && (typeof val === "object" || Array.isArray(val))
+            ? JSON.stringify(val)
+            : String(val);
+        const str = serialized.replace(/"/g, '""');
         return `"${str}"`;
       })
       .join(',');

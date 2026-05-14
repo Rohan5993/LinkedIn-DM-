@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import OutreachForm from './components/OutreachForm';
 import MessageDisplay from './components/MessageDisplay';
 import ProfileTable from './components/ProfileTable';
-import { generateOutreach, bulkGenerateOutreach, type OutreachContent } from './services/geminiService';
+import { generateOutreach, bulkGenerateOutreach, formatClientError, type OutreachContent } from './services/geminiService';
 import { Linkedin, Zap, LogIn, LogOut, User as UserIcon, List, Search, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase, signIn, sign_out, saveProfile, getProfiles } from './lib/supabase';
@@ -73,7 +73,7 @@ export default function App() {
       }
       loadProfiles();
     } catch (err) {
-      setError('System failure. Verify API connection and try again.');
+      setError(formatClientError(err));
       console.error(err);
     } finally {
       setIsLoading(false);
