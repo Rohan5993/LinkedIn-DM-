@@ -44,6 +44,14 @@ The dev server starts Express on port **3000** and serves the Vite app; the brow
 
 **Older saved rows** in the archive may show **Provenance not recorded** (saved before this tagging existed).
 
+## Deploy (Render or Docker)
+
+This app is a single **Node** process: `npm run build` then `npm run start` serves the Vite build and `POST /api/extract`. **`PORT`** is read from the environment (defaults to 3000 locally).
+
+**Render (recommended):** In the [Render](https://render.com) dashboard choose **New > Blueprint**, connect `Rohan5993/LinkedIn-DM-`, and apply [`render.yaml`](render.yaml). When prompted, set **`GEMINI_API_KEY`** and **`APIFY_API_TOKEN`** (or `APIFY_TOKEN`). Optional: `APIFY_LINKEDIN_ACTOR`, `VITE_SUPABASE_*`. After the first deploy, pushes to the linked branch trigger redeploys.
+
+**Docker:** Build with a Gemini key so the client bundle is wired: `docker build --build-arg GEMINI_API_KEY=your_key -t linkedin-dm .` then run with `-e APIFY_API_TOKEN=... -e GEMINI_API_KEY=... -p 3000:3000`.
+
 ## Optional: Supabase
 
 Auth and cloud archive use Supabase env vars from the Vite client (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`) when configured. Provenance is stored in **localStorage** with each profile; syncing `data_source` to Supabase would require adding a column and updating [`src/lib/supabase.ts`](src/lib/supabase.ts).
